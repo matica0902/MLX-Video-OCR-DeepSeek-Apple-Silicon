@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- This file is part of MLX DeepSeek-OCR. Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0). -->
+<!-- See the LICENSE file in the project root for full license text: https://www.gnu.org/licenses/agpl-3.0.en.html -->
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLX DeepSeek-OCR - 完極本地版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- 這是修正並整合後的最終版本，請用它來取代您舊的 <style> 區塊 -->
+    <style type="text/tailwindcss">
+        /* 
+          注意：這裡的 <style> 標籤已新增 type="text/tailwindcss"，
+          這是讓 @apply 指令能夠正常運作的必要步驟。
+        */
+
+        /* --- 拖放區塊與載入動畫 (保留不變) --- */
+        .drop-zone {
+            border: 2px dashed #cbd5e0;
+            transition: all 0.3s ease;
+        }
+        .drop-zone.dragover {
+            border-color: #4299e1;
+            background-color: #ebf8ff;
+        }
+        .spinner {
+            border: 3px solid #f3f4f6;
+            border-top: 3px solid #a78bfa;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* --- 功能分頁 (保留不變) --- */
+        .mode-tab {
+            transition: all 0.3s ease;
+        }
+        .mode-tab.active {
+            background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        /* ▼▼▼ 這裡是修改後的程式碼 ▼▼▼ */
+        /* --- PDF 預覽縮圖 --- */
+        .thumbnail-item {
+            /*
+              修改說明：
+              - 統一使用 Tailwind 的 @apply 指令。
+              - 調整 hover 效果為灰色邊框，與選中的紫色做區分。
+              - 增加 p-1 內距，讓視覺更舒適。
+            */
+            @apply cursor-pointer transition-all duration-200 border-2 border-transparent hover:border-gray-300 rounded-lg overflow-hidden p-1;
+        }
+
+        .thumbnail-item.selected {
+            /*
+              修改說明：
+              - 完全改用 @apply 的寫法，風格統一。
+              - 使用 border-purple-500 和 ring 工具類取代手寫的 border-color 和 box-shadow。
+              - ring 是 Tailwind 中實現外光暈效果的最佳實踐。
+            */
+            @apply border-purple-500 ring-2 ring-purple-300;
+        }
+
+        .thumbnail-item img {
+            /*
+              修改說明：
+              - 增加圓角，使其與父容器的圓角匹配。
+            */
+            @apply w-full h-full object-cover rounded;
+        }
+        /* ▲▲▲ 修改結束 ▲▲▲ */
+
+
+        /* --- 其他 UI 元件 (保留不變) --- */
+        .info-banner {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .info-banner h3 {
+            margin: 0 0 10px 0;
+            font-size: 1.3em;
+        }
+        .hint-box {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        .option-label {
+            display: block;
+            padding: 12px;
+            margin: 8px 0;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .option-label:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+        .option-label input[type="checkbox"]:checked + span {
+            color: #667eea;
+            font-weight: bold;
+        }
+        .option-description {
+            display: block;
+            color: #666;
+            margin-top: 5px;
+            font-size: 0.9em;
+        }
+        .preset-btn {
+            padding: 12px 24px;
+            margin: 5px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+        .preset-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <header class="text-center mb-8">
+            <h1 class="text-5xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
+                MLX DeepSeek-OCR
+            </h1>
+            <p class="text-xl text-gray-700">Apple Silicon 原生 · 4bit 極速 · 完全離線</p>
+        </header>
+
+        <!-- 標籤導航 -->
+        <div class="flex space-x-4 mb-6">
+            <button id="tab-ocr" class="tab-btn active px-6 py-3 rounded-xl font-bold text-lg bg-purple-600 text-white shadow-lg">
+                📄 OCR 辨識
+            </button>
+            <button id="tab-video" class="tab-btn px-6 py-3 rounded-xl font-bold text-lg bg-gray-200 text-gray-700 hover:bg-gray-300">
+                🎬 影片截圖
+            </button>
+            <button id="tab-preprocess" disabled class="tab-btn px-6 py-3 rounded-xl font-bold text-lg bg-gray-200 text-gray-700 hover:bg-gray-300 opacity-50 cursor-not-allowed" title="獨立前處理功能已禁用，請使用 OCR Tab 或影片截圖 Tab 中的前處理功能">
+                🎨 照片前處理
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <!-- 左側：上傳 + 設定 + 預覽 -->
+            <div class="xl:col-span-1 space-y-6">
+                
+                <!-- OCR 辨識 Tab -->
+                <div id="tab-ocr-content" class="tab-content active">
+                    <div class="bg-white rounded-2xl shadow-xl p-6">
+                        <h2 class="text-2xl font-bold mb-4 text-gray-800">上傳檔案</h2>
+                        
+                        <div id="dropZone" class="drop-zone rounded-xl p-10 text-center cursor-pointer mb-4 bg-gray-50 hover:bg-gray-100">
+                            <svg class="mx-auto h-16 w-16 text-purple-500" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            <p class="mt-3 text-lg font-medium text-gray-700">拖放檔案到這裡</p>
+                            <p class="mt-1 text-sm text-gray-500">支援 JPG、PNG、PDF（最大 32MB）</p>
+                            <input type="file" id="fileInput" accept="image/*,application/pdf" class="hidden">
+                        </div>
+
+                        <!-- 圖片前處理選項（圖片專用） -->
+                        <div id="imagePreprocessSection" class="hidden space-y-4 mb-4">
+                            <div class="p-5 bg-yellow-50 rounded-xl border-2 border-yellow-200">
+                                <h3 class="text-lg font-bold text-yellow-800 mb-3">🎨 照片前處理選項（可選）</h3>
+                                <p class="text-sm text-yellow-700 mb-4">選擇處理選項後，系統會在OCR辨識前自動處理圖片</p>
+                                
+                                <div class="space-y-3 mb-4">
+                                    <label class="flex items-start space-x-3 cursor-pointer">
+                                        <input type="checkbox" id="imageAutoRotate" class="mt-1 rounded text-purple-600">
+                                        <div>
+                                            <span class="font-medium text-gray-800">🔄 自動旋轉</span>
+                                            <p class="text-xs text-gray-600">自動檢測並修正圖片傾斜角度</p>
+                                        </div>
+                                    </label>
+                                    
+                                    <label class="flex items-start space-x-3 cursor-pointer">
+                                        <input type="checkbox" id="imageEnhance" class="mt-1 rounded text-purple-600">
+                                        <div>
+                                            <span class="font-medium text-gray-800">✨ 增強對比+銳化</span>
+                                            <p class="text-xs text-gray-600">讓圖片更清晰，對比更明顯</p>
+                                        </div>
+                                    </label>
+                                    
+                                    <label class="flex items-start space-x-3 cursor-pointer">
+                                        <input type="checkbox" id="imageRemoveShadows" class="mt-1 rounded text-purple-600">
+                                        <div>
+                                            <span class="font-medium text-gray-800">☀️ 去除陰影</span>
+                                            <p class="text-xs text-gray-600">移除光線不均造成的陰影</p>
+                                        </div>
+                                    </label>
+                                    
+                                    <label class="flex items-start space-x-3 cursor-pointer">
+                                        <input type="checkbox" id="imageBinarize" class="mt-1 rounded text-purple-600">
+                                        <div>
+                                            <span class="font-medium text-gray-800">⚫⚪ 二值化</span>
+                                            <p class="text-xs text-gray-600">轉換成純黑白圖（⚠️ 不可逆）</p>
+                                        </div>
+                                    </label>
+                                    
+                                    <label class="flex items-start space-x-3 cursor-pointer">
+                                        <input type="checkbox" id="imageRemoveBg" class="mt-1 rounded text-purple-600">
+                                        <div>
+                                            <span class="font-medium text-gray-800">🎨 去除背景 (AI)</span>
+                                            <p class="text-xs text-gray-600">使用 rembg AI 模型智能去背</p>
+                                        </div>
+                                    </label>
+                                </div>
+                                
+                                <div class="flex space-x-3 mt-4">
+                                    <button id="skipImagePreprocessBtn" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition">
+                                        跳過前處理
+                                    </button>
+                                    <button id="executeImagePreprocessBtn" class="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition">
+                                        執行前處理
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 配置選擇面板 -->
+                        <div id="configPanel" class="hidden space-y-4 mb-4">
+                            <!-- Mode 選擇 -->
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">📄 內容類型</label>
+                                <select id="modeSelect" class="w-full border-2 border-purple-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-4 focus:ring-purple-300">
+                                    <option value="Document">Document Mode (結構化內容)</option>
+                                    <option value="Scene">Scene Mode (現場文字)</option>
+                                </select>
+                            </div>
+
+                            <!-- Subcategory 選擇 -->
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">📚 細分類別</label>
+                                <select id="subcategorySelect" class="w-full border-2 border-blue-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-4 focus:ring-blue-300">
+                                    <option value="Academic">Academic</option>
+                                </select>
+                            </div>
+
+                            <!-- Complexity 滑塊 -->
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">🎚️ 複雜度：<span id="complexityLabel">Medium (256 tokens) ⭐ 推薦</span></label>
+                                <input type="range" id="complexitySlider" min="0" max="4" value="2" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                                <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                    <span>Tiny (64)</span>
+                                    <span>Small (100)</span>
+                                    <span>Medium (256)</span>
+                                    <span>Large (400)</span>
+                                    <span>Gundam (800)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PDF 模式切換 -->
+                        <div id="pdfModeSection" class="hidden space-y-4">
+                            <div class="flex space-x-3">
+                                <button id="batchModeBtn" class="flex-1 mode-tab active py-4 px-6 rounded-xl font-bold text-lg shadow-lg">
+                                    批次處理
+                                </button>
+                                <button id="singleModeBtn" class="flex-1 mode-tab py-4 px-6 rounded-xl font-bold text-lg bg-gray-50 text-gray-700">
+                                    單頁辨識
+                                </button>
+                            </div>
+
+                            <!-- PDF 前處理按鈕（切換到前處理Tab） -->
+                            <div id="pdfPreprocessSection" class="hidden p-5 bg-yellow-50 rounded-xl border-2 border-yellow-200">
+                                <h3 class="text-lg font-bold text-yellow-800 mb-3">🎨 PDF前處理選項（可選）</h3>
+                                <p class="text-sm text-yellow-700 mb-4">點擊下方按鈕將PDF頁面提取為圖片，然後在前處理Tab中進行處理</p>
+                                
+                                <div class="flex space-x-3">
+                                    <button id="skipPdfPreprocessBtn" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition">
+                                        跳過前處理
+                                    </button>
+                                    <button id="executePdfPreprocessBtn" class="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition">
+                                        前往前處理
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 批次設定 -->
+                            <div id="batchSettings" class="p-5 bg-purple-50 rounded-xl border-2 border-purple-200">
+                                <p class="text-sm font-bold text-purple-800 mb-3">每批次處理頁數</p>
+                                <select id="batchSize" class="w-full border-2 border-purple-300 rounded-lg px-4 py-3">
+                                    <option value="2" selected>2 頁（推薦）</option>
+                                    <option value="1">1 頁（最穩）</option>
+                                    <option value="3">3 頁</option>
+                                    <option value="5">5 頁</option>
+                                    <option value="10">10 頁</option>
+                                    <option value="custom">自訂</option>
+                                </select>
+                                <input type="number" id="customBatchSize" class="hidden w-full mt-2 border-2 border-purple-300 rounded-lg px-4 py-3" min="1" max="50" value="5" placeholder="輸入自訂頁數 (1-50)">
+                                <div id="batchValidationError" class="hidden mt-2 text-sm text-red-600"></div>
+                            </div>
+
+                            <!-- 單頁設定 -->
+                            <div id="singleSettings" class="hidden p-5 bg-blue-50 rounded-xl border-2 border-blue-200">
+                                <p class="text-sm font-bold text-blue-800 mb-3">選擇頁面</p>
+                                <select id="pageSelector" class="w-full border-2 border-blue-300 rounded-lg px-4 py-3"></select>
+                            </div>
+                        </div>
+
+                        <!-- 執行按鈕 -->
+                        <div class="mt-6 space-y-3">
+                            <button id="processBatchBtn" class="hidden w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-4 px-6 rounded-xl shadow-xl text-xl transition transform hover:scale-105">
+                                <span id="batchBtnText">開始批次處理</span>
+                            </button>
+                            <button id="processSingleBtn" class="hidden w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-bold py-4 px-6 rounded-xl shadow-xl text-xl transition transform hover:scale-105">
+                                <span id="singleBtnText">辨識此頁</span>
+                            </button>
+                            <button id="processImageBtn" class="hidden w-full bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white font-bold py-4 px-6 rounded-xl shadow-xl text-xl transition transform hover:scale-105">
+                                <span id="imageBtnText">開始辨識</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 縮圖列表 -->
+                    <div id="thumbnails" class="hidden bg-white rounded-2xl shadow-xl p-4 max-h-96 overflow-y-auto">
+                        <p class="text-sm font-bold text-gray-700 mb-3">點擊縮圖切換頁面</p>
+                        <div id="thumbnailsGrid" class="grid grid-cols-3 gap-3"></div>
+                    </div>
+
+                    <!-- 預覽區 -->
+                    <div class="bg-white rounded-2xl shadow-xl p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-xl font-bold text-gray-800">預覽</h3>
+                            <div class="space-x-2">
+                                <button onclick="zoomPreview(1.2)" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold w-10 h-10 rounded-full shadow">+</button>
+                                <button onclick="zoomPreview(0.8)" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold w-10 h-10 rounded-full shadow">−</button>
+                                <button id="clearBtn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg shadow">清除</button>
+                            </div>
+                        </div>
+                        <div id="preview" class="hidden relative bg-gray-100 rounded-xl overflow-hidden border-4 border-gray-300">
+                            <img id="previewImage" class="w-full transition-transform duration-200" style="transform: scale(1)" alt="預覽">
+                        </div>
+                    </div>
+                </div>
+
+                
+                <div id="tab-preprocess-content" class="tab-content">
+                    <!-- 頂部說明橫幅 -->
+                    <div class="info-banner">
+                        <h3>🎨 關於「去除背景」功能</h3>
+                        <p>
+                            ✅ 使用 <strong>rembg AI 模型</strong>，與您的 Colab 代碼<strong>完全相同</strong><br>
+                            ✅ 只需勾選「去除背景」選項，或點擊「🎨 僅去背景」快速按鈕<br>
+                            ✅ 輸出為透明背景 PNG 格式<br>
+                            💡 如需純去背（不做其他處理），點擊「🎨 僅去背景」按鈕即可
+                        </p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-xl p-6">
+                        <h2 class="text-2xl font-bold mb-4 text-gray-800">照片前處理</h2>
+                        
+                        <div class="hint-box">
+                            💡 提示：如果不勾選任何選項，將保存原圖（不做任何處理）<br>
+                            💡 提示：可以多選，系統會依序處理所有選項
+                        </div>
+                        
+                        <div id="preprocessDropZone" class="drop-zone rounded-xl p-8 text-center cursor-pointer mb-4 bg-gray-50 hover:bg-gray-100 border-2 border-dashed border-purple-300">
+                            <svg class="mx-auto h-12 w-12 text-purple-500" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            <p class="mt-3 text-lg font-medium text-gray-700">拖放照片到這裡</p>
+                            <p class="mt-1 text-sm text-gray-500">支援 JPG、PNG（可多選）</p>
+                            <input type="file" id="preprocessFileInput" accept="image/*" multiple disabled class="hidden">
+                        </div>
+
+                        <!-- 前處理設定 -->
+                        <div id="preprocessSettings" class="space-y-4 mb-4 hidden">
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-800 mb-3">處理選項（可多選）</h3>
+                                
+                                <label class="option-label">
+                                    <input type="checkbox" id="autoRotate" class="rounded text-purple-600">
+                                    <span>🔄 自動旋轉</span>
+                                    <span class="option-description">自動檢測並修正圖片傾斜角度（適合手機拍攝的歪斜照片）</span>
+                                </label>
+                                
+                                <label class="option-label">
+                                    <input type="checkbox" id="enhance" class="rounded text-purple-600">
+                                    <span>✨ 增強對比+銳化</span>
+                                    <span class="option-description">讓圖片更清晰，對比更明顯（適合模糊、灰濛濛的照片）</span>
+                                </label>
+                                
+                                <label class="option-label">
+                                    <input type="checkbox" id="removeShadows" class="rounded text-purple-600">
+                                    <span>☀️ 去除陰影</span>
+                                    <span class="option-description">移除光線不均造成的陰影（適合有陰影的文件掃描）</span>
+                                </label>
+                                
+                                <label class="option-label">
+                                    <input type="checkbox" id="binarize" class="rounded text-purple-600">
+                                    <span>⚫⚪ 二值化</span>
+                                    <span class="option-description">轉換成純黑白圖（適合文字辨識、列印，⚠️ 不可逆）</span>
+                                </label>
+                                
+                                <label class="option-label">
+                                    <input type="checkbox" id="removeBg" class="rounded text-purple-600">
+                                    <span>🎨 去除背景 (AI)</span>
+                                    <span class="option-description">
+                                        <strong>使用 rembg AI 模型智能去背</strong><br>
+                                        • 等同 Colab 代碼，效果完全相同<br>
+                                        • 輸出透明 PNG 格式<br>
+                                        • 適合產品照、人像照
+                                    </span>
+                                </label>
+                            </div>
+
+                            <!-- 快速預設按鈕 -->
+                            <div class="bg-purple-50 p-4 rounded-xl border-2 border-purple-200">
+                                <h3 class="text-lg font-bold text-purple-800 mb-3">⚡ 快速預設組合（一鍵套用）</h3>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button onclick="applyPreprocessPreset('remove_background_only')" class="preset-btn bg-gradient-to-r from-purple-600 to-pink-600 text-white">
+                                        🎨 僅去背景
+                                    </button>
+                                    <button onclick="applyPreprocessPreset('photo_optimize')" class="preset-btn bg-gradient-to-r from-blue-600 to-cyan-600 text-white">
+                                        📷 照片優化
+                                    </button>
+                                    <button onclick="applyPreprocessPreset('scan_optimize')" class="preset-btn bg-gradient-to-r from-green-600 to-teal-600 text-white">
+                                        📄 掃描優化
+                                    </button>
+                                    <button onclick="applyPreprocessPreset('enhance_blurry')" class="preset-btn bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
+                                        🔍 模糊增強
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 預設配置 -->
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">預設配置</label>
+                                <select id="preprocessPreset" class="w-full border-2 border-purple-200 rounded-xl px-4 py-3">
+                                    <option value="custom">自訂設定</option>
+                                    <option value="scan_optimize">掃描件優化</option>
+                                    <option value="photo_optimize">拍照文檔優化</option>
+                                    <option value="enhance_blurry">模糊照片增強</option>
+                                    <option value="remove_background_only">僅去背景</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- 進度條（修正 4） -->
+                        <div id="preprocessProgress" class="hidden mb-4">
+                            <p class="text-sm font-bold text-gray-700 mb-2">處理進度</p>
+                            <div class="w-full bg-gray-200 rounded-full h-3">
+                                <div id="preprocessProgressBar" class="bg-gradient-to-r from-purple-500 to-pink-500 h-3 rounded-full transition-all duration-300" style="width: 0%"></div>
+                            </div>
+                            <p id="preprocessProgressText" class="text-xs text-gray-500 mt-2 text-center">0/0</p>
+                        </div>
+
+                        <!-- 執行按鈕 -->
+                        <div class="mt-6 space-y-3">
+                            <button id="processPreprocessBtn" disabled class="hidden w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-4 px-6 rounded-xl shadow-xl text-xl transition transform hover:scale-105">
+                                開始前處理
+                            </button>
+                            <button id="downloadPreprocessBtn" disabled class="hidden w-full bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white font-bold py-4 px-6 rounded-xl shadow-xl text-xl transition transform hover:scale-105">
+                                下載處理結果
+                            </button>
+                            <button id="sendToOcrBtn" disabled class="hidden w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-bold py-4 px-6 rounded-xl shadow-xl text-xl transition transform hover:scale-105">
+                                發送至 OCR
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 前處理預覽 -->
+                    <div id="preprocessPreview" class="bg-white rounded-2xl shadow-xl p-6 hidden">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">處理結果預覽</h3>
+                        <div id="preprocessImages" class="grid grid-cols-2 gap-4 max-h-96 overflow-y-auto"></div>
+                    </div>
+                </div>
+
+         
+                <div id="tab-video-content" class="tab-content">
+                    <div class="bg-white rounded-2xl shadow-xl p-6">
+                        <h2 class="text-2xl font-bold mb-4 text-gray-800">影片截圖</h2>
+                        
+                        <div id="videoDropZone" class="drop-zone rounded-xl p-8 text-center cursor-pointer mb-4 bg-gray-50 hover:bg-gray-100 border-2 border-dashed border-blue-300">
+                            <svg class="mx-auto h-12 w-12 text-blue-500" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                <path d="M12 8v28l16-14L12 8z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M36 8v28" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <p class="mt-3 text-lg font-medium text-gray-700">拖放影片到這裡</p>
+                            <p class="mt-1 text-sm text-gray-500">支援 MP4、AVI、MOV、MKV</p>
+                            <input type="file" id="videoFileInput" accept="video/*" class="hidden">
+                        </div>
+
+                        <!-- 影片資訊 -->
+                        <div id="videoInfo" class="hidden mb-4 p-4 bg-blue-50 rounded-xl border-2 border-blue-200">
+                            <h4 class="font-bold text-blue-800 mb-2">影片資訊</h4>
+                            <div id="videoInfoContent" class="text-sm text-blue-700"></div>
+                        </div>
+
+                        <!-- 截圖設定 -->
+                        <div id="videoSettings" class="space-y-4 mb-4 hidden">
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">截圖方式</label>
+                                <select id="extractionMethod" class="w-full border-2 border-blue-200 rounded-xl px-4 py-3">
+                                    <option value="fixed_count">固定數量 (100張)</option>
+                                    <option value="fixed_interval">固定間隔 (每秒5張)</option>
+                                    <option value="scene_change">場景變化偵測</option>
+                                </select>
+                            </div>
+
+                            <div id="frameCountSetting" class="hidden">
+                                <label class="block text-sm font-bold text-gray-700 mb-2">總幀數</label>
+                                <input type="number" id="totalFrames" min="1" max="1000" value="1000" class="w-full border-2 border-blue-200 rounded-xl px-4 py-3">
+                            </div>
+
+                            <div id="intervalSetting" class="hidden">
+                                <label class="block text-sm font-bold text-gray-700 mb-2">每秒張數</label>
+                                <input type="number" id="frameInterval" min="1" max="30" value="5" class="w-full border-2 border-blue-200 rounded-xl px-4 py-3">
+                            </div>
+
+                            <!-- 修正 1：場景變化偵測設定（新增） -->
+                            <div id="sceneChangeSettings" class="hidden">
+                                <label class="block text-sm font-bold text-gray-700 mb-2">場景變化敏感度</label>
+                                <input type="range" id="sceneSensitivity" min="0.1" max="1" step="0.1" value="0.5" class="w-full h-2 bg-gray-200 rounded-lg">
+                                <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                    <span>低 (更多幀)</span>
+                                    <span id="sensitivityLabel">中 (0.5)</span>
+                                    <span>高 (更少幀)</span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">輸出格式</label>
+                                <select id="outputFormat" class="w-full border-2 border-blue-200 rounded-xl px-4 py-3">
+                                    <option value="jpg">JPG (高壓縮)</option>
+                                    <option value="png">PNG (高品質)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- 執行按鈕 -->
+                        <div class="mt-6 space-y-3">
+                            <button id="extractFramesBtn" class="hidden w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-bold py-4 px-6 rounded-xl shadow-xl text-xl transition transform hover:scale-105">
+                                開始截圖
+                            </button>
+                            <button id="downloadFramesBtn" class="hidden w-full bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white font-bold py-4 px-6 rounded-xl shadow-xl text-xl transition transform hover:scale-105">
+                                下載截圖
+                            </button>
+                            <button id="sendFramesToOcrBtn" class="hidden w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-4 px-6 rounded-xl shadow-xl text-xl transition transform hover:scale-105">
+                                發送到 OCR
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 截圖預覽（這就是截圖結果） -->
+                    <div id="framesPreview" class="bg-white rounded-2xl shadow-xl p-6 hidden mt-6">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">📸 截圖結果</h3>
+                        <div class="flex justify-between items-center mb-4">
+                            <span id="framesCount" class="text-sm text-gray-600">已選擇 0 張</span>
+                            <div class="space-x-2">
+                                <button id="selectAllFrames" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm">全選</button>
+                                <button id="deselectAllFrames" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg text-sm">全不選</button>
+                            </div>
+                        </div>
+                        <div id="framesGrid" class="grid grid-cols-3 gap-3 max-h-96 overflow-y-auto"></div>
+                    </div>
+                </div>
+
+            </div>
+
+           
+            <div class="xl:col-span-2 bg-white rounded-2xl shadow-2xl p-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-3xl font-bold text-gray-800" id="resultTitle">辨識結果</h2>
+                    <div class="space-x-3">
+                        <button id="copyBtn" class="hidden bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition transform hover:scale-105">
+                            複製全部
+                        </button>
+                        <button id="downloadBtn" class="hidden bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition transform hover:scale-105">
+                            下載 TXT
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 進度條（修正 8） -->
+                <div id="progressInfo" class="hidden mb-6">
+                    <div class="text-center">
+                        <div class="inline-flex items-center space-x-2 text-sm font-medium">
+                            <span>進度：</span>
+                            <span id="progressCurrent" class="text-purple-600 font-bold">0</span>
+                            <span>/ <span id="progressTotal">0</span> 頁</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-3 mt-2">
+                            <div id="progressBar" class="bg-gradient-to-r from-purple-500 to-pink-500 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                        <div class="text-xs text-gray-500 mt-2" id="progressConfig">配置信息</div>
+                    </div>
+                </div>
+
+                <!-- 結果內容 -->
+                <div id="result" class="bg-gray-50 rounded-2xl p-6 min-h-96 max-h-screen overflow-y-auto border-2 border-dashed border-gray-300">
+                    <p class="text-center text-gray-400 text-xl mt-32" id="defaultResultText">請上傳檔案開始處理</p>
+                </div>
+
+                <!-- 批次控制 -->
+                <div id="batchControls" class="hidden mt-6 flex space-x-4">
+                    <button id="continueBtn" class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-4 px-6 rounded-xl shadow-xl transition transform hover:scale-105">
+                        繼續下一批
+                    </button>
+                    <button id="stopBtn" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-4 px-6 rounded-xl shadow-xl transition transform hover:scale-105">
+                        停止批次
+                    </button>
+                </div>
+
+                <!-- 成功提示 -->
+                <div id="success" class="hidden mt-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-center font-bold text-2xl py-6 rounded-2xl shadow-2xl">
+                    <span id="successMessage">全部完成！</span>
+                </div>
+
+                <!-- 錯誤提示（修正 10） -->
+                <div id="error" class="hidden mt-6 bg-red-100 border-2 border-red-400 text-red-700 px-6 py-4 rounded-xl font-bold" role="alert"></div>
+            </div>
+        </div>
+
+        <!-- Loading 遮罩 -->
+        <div id="loading" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-2xl p-10 shadow-2xl text-center">
+                <div class="spinner mx-auto mb-4"></div>
+                <p class="text-xl font-bold text-gray-800" id="loadingText">處理中...</p>
+                <p class="text-sm text-gray-600 mt-2" id="loadingSubtext">請稍候</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 載入 app.js -->
+    <script src="/static/app.js?v=2"></script>
+
+    <!-- 內嵌 JS：標籤切換、預設配置、快速功能 -->
+    <script>
+        // 標籤切換功能（含狀態管理）
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // ===== 檢查Tab按鈕是否禁用（獨立前處理Tab已凍結） =====
+                    if (this.disabled) {
+                        // 顯示提示
+                        if (typeof showError === 'function') {
+                            showError('獨立前處理功能已禁用，請使用 OCR Tab 或影片截圖 Tab 中的前處理功能');
+                        } else {
+                            alert('獨立前處理功能已禁用，請使用 OCR Tab 或影片截圖 Tab 中的前處理功能');
+                        }
+                        return; // 完全阻止後續執行
+                    }
+                    
+                    const tabName = this.id.replace('tab-', '');
+                    
+                    // 根據切換的 Tab 執行對應的狀態清理
+                    if (tabName === 'ocr') {
+                        // 切換到 OCR Tab
+                        if (typeof switchToOcrTab === 'function') {
+                            switchToOcrTab();
+                        }
+                    } else if (tabName === 'video') {
+                        // 切換到影片 Tab
+                        if (typeof switchToVideoTab === 'function') {
+                            switchToVideoTab();
+                        }
+                    } else if (tabName === 'preprocess') {
+                        // Tab按鈕未禁用：允許切換（PDF前處理模式）
+                        if (typeof switchToPreprocessTab === 'function') {
+                            switchToPreprocessTab();
+                        }
+                    }
+                    
+                    // 移除所有 active
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active', 'bg-purple-600', 'text-white'));
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.add('bg-gray-200', 'text-gray-700'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    
+                    // 設定當前 active
+                    this.classList.remove('bg-gray-200', 'text-gray-700');
+                    this.classList.add('active', 'bg-purple-600', 'text-white');
+                    
+                    const tabId = this.id + '-content';
+                    const tabContent = document.getElementById(tabId);
+                    if (tabContent) {
+                        tabContent.classList.add('active');
+                    } else {
+                        console.error('找不到 tab 內容元素:', tabId);
+                    }
+                    
+                    // 更新結果標題（影片截圖不使用此區域，所以不更新）
+                    if (tabName !== 'video') {
+                        const titles = {
+                            'ocr': '辨識結果',
+                            'preprocess': '前處理結果'
+                        };
+                        const titleEl = document.getElementById('resultTitle');
+                        if (titleEl) {
+                            titleEl.textContent = titles[tabName] || '處理結果';
+                        }
+                    }
+                });
+            });
+
+            // 初始化截圖方式顯示
+            const extractionMethod = document.getElementById('extractionMethod');
+            if (extractionMethod) {
+                extractionMethod.dispatchEvent(new Event('change'));
+            }
+        });
+
+        // 照片前處理預設配置
+        const PREPROCESS_PRESETS = {
+            'remove_background_only': {
+                name: '僅去背景',
+                auto_rotate: false,
+                enhance: false,
+                remove_shadows: false,
+                binarize: false,
+                remove_bg: true
+            },
+            'photo_optimize': {
+                name: '照片優化',
+                auto_rotate: true,
+                enhance: true,
+                remove_shadows: true,
+                binarize: false,
+                remove_bg: false
+            },
+            'scan_optimize': {
+                name: '掃描優化',
+                auto_rotate: true,
+                enhance: true,
+                remove_shadows: true,
+                binarize: true,
+                remove_bg: false
+            },
+            'enhance_blurry': {
+                name: '模糊增強',
+                auto_rotate: false,
+                enhance: true,
+                remove_shadows: false,
+                binarize: false,
+                remove_bg: false
+            }
+        };
+
+        // 套用前處理預設（修正 6）
+        function applyPreprocessPreset(presetName) {
+            const preset = PREPROCESS_PRESETS[presetName];
+            
+            if (preset) {
+                // 取消所有勾選
+                document.querySelectorAll('#preprocessSettings input[type="checkbox"]').forEach(cb => {
+                    cb.checked = false;
+                });
+                
+                // 套用預設
+                document.getElementById('autoRotate').checked = preset.auto_rotate;
+                document.getElementById('enhance').checked = preset.enhance;
+                document.getElementById('removeShadows').checked = preset.remove_shadows;
+                document.getElementById('binarize').checked = preset.binarize;
+                document.getElementById('removeBg').checked = preset.remove_bg;
+                
+                // 更新下拉選單
+                const presetSelect = document.getElementById('preprocessPreset');
+                if (presetSelect) {
+                    presetSelect.value = presetName;
+                }
+            }
+        }
+
+        // 縮放預覽功能
+        function zoomPreview(factor) {
+            const img = document.getElementById('previewImage');
+            if (img) {
+                const current = img.style.transform.match(/scale\(([^)]+)\)/);
+                const scale = current ? parseFloat(current[1]) : 1;
+                img.style.transform = `scale(${scale * factor})`;
+            }
+        }
+
+        // 注意：以下事件监听器已移至 app.js 的 DOMContentLoaded 中统一管理
+        // 为避免重复绑定，此处已注释
+        // 如需修改，请到 app.js 的 DOMContentLoaded 区块中修改
+        
+        /*
+        // 截圖方式切換（修正 1：新增場景變化選項）
+        document.getElementById('extractionMethod').addEventListener('change', function() {
+            document.getElementById('frameCountSetting').classList.add('hidden');
+            document.getElementById('intervalSetting').classList.add('hidden');
+            document.getElementById('sceneChangeSettings').classList.add('hidden');
+            
+            if (this.value === 'fixed_count') {
+                document.getElementById('frameCountSetting').classList.remove('hidden');
+            } else if (this.value === 'fixed_interval') {
+                document.getElementById('intervalSetting').classList.remove('hidden');
+            } else if (this.value === 'scene_change') {
+                document.getElementById('sceneChangeSettings').classList.remove('hidden');
+            }
+        });
+
+        // 場景敏感度滑塊顯示（修正 1）
+        document.getElementById('sceneSensitivity').addEventListener('input', function() {
+            const labels = ['低 (更多幀)', '中 (0.5)', '高 (更少幀)'];
+            const index = Math.round((this.value - 0.1) / 0.9 * 2);
+            document.getElementById('sensitivityLabel').textContent = `${labels[index]} (${this.value})`;
+        });
+
+        // 預設配置下拉選單同步（修正 6）
+        document.getElementById('preprocessPreset').addEventListener('change', function() {
+            const presets = {
+                'scan_optimize': { autoRotate: true, enhance: true, removeShadows: true, binarize: true, removeBg: false },
+                'photo_optimize': { autoRotate: true, enhance: true, removeShadows: true, binarize: false, removeBg: false },
+                'enhance_blurry': { autoRotate: false, enhance: true, removeShadows: false, binarize: false, removeBg: false },
+                'remove_background_only': { autoRotate: false, enhance: false, removeShadows: false, binarize: false, removeBg: true }
+            };
+            
+            const preset = presets[this.value];
+            if (preset && this.value !== 'custom') {
+                document.getElementById('autoRotate').checked = preset.autoRotate;
+                document.getElementById('enhance').checked = preset.enhance;
+                document.getElementById('removeShadows').checked = preset.removeShadows;
+                document.getElementById('binarize').checked = preset.binarize;
+                document.getElementById('removeBg').checked = preset.removeBg;
+            }
+        });
+        */
+    </script>
+</body>
+</html>

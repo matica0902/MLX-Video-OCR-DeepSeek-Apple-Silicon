@@ -1,0 +1,15 @@
+# Project licensed under AGPL-3.0
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.env
+
+# System
+.DS_Store
+
+# Project specific
+uploads/
+*.log

@@ -1,0 +1,333 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+<!-- This document is part of MLX DeepSeek-OCR and is licensed under AGPL-3.0. See LICENSE in project root. -->
+
+# MLX DeepSeek-OCR 本地运行指南
+
+本应用专为 Mac M2（Apple Silicon）优化，使用 MLX 框架提供最佳性能。
+
+## 📋 系统要求
+
+- ✅ Mac with Apple Silicon (M1/M2/M3/M4)
+- ✅ macOS 13.0 或更高版本
+- ✅ Python 3.11
+- ✅ 至少 16GB RAM（推荐）
+- ✅ 约 3GB 可用磁盘空间（用于模型缓存）
+
+---
+
+## 🚀 快速开始
+
+### 步骤 1：下载项目文件
+
+从原始開發環境 Replit 下载以下文件到您的 Mac：
+
+```
+MLX-DeepSeek-OCR/
+├── app.py
+├── requirements.txt
+├── README.md
+├── templates/
+│   └── index.html
+├── static/
+│   └── app.js
+└── uploads/        # 这个目录会自动创建
+```
+
+**下载方法：**
+1. 在 Replit 界面点击左上角的三条横线 ☰
+2. 选择 "Download as ZIP"
+3. 解压到您的 Mac 本地目录
+
+---
+
+### 步骤 2：安装 Python 依赖
+
+打开终端（Terminal），进入项目目录：
+
+```bash
+# 进入项目目录
+cd ~/Downloads/MLX-DeepSeek-OCR
+
+# 创建虚拟环境（推荐）
+python3.11 -m venv .venv
+
+# 激活虚拟环境
+source .venv/bin/activate
+
+# 安装依赖
+pip install -r requirements.txt
+# 確保安裝 opencv-python
+pip install opencv-python
+```
+
+**安装时间：** 约 2-5 分钟
+
+---
+
+### 步骤 3：启动应用
+
+```bash
+# 确保虚拟环境已激活
+source .venv/bin/activate
+
+# 运行应用
+python app.py
+```
+
+您会看到类似输出：
+
+```
+Starting MLX DeepSeek-OCR Web Application...
+Note: Model will be loaded on first OCR request
+ * Serving Flask app 'app'
+ * Debug mode: on
+ * Running on http://127.0.0.1:5000
+```
+
+---
+
+### 步骤 4：打开浏览器
+
+在浏览器中访问：
+
+```
+http://localhost:5000
+```
+
+---
+
+## 📸 首次使用
+
+### 第一次上传图片时：
+
+1. **自动下载模型**
+   - 模型大小：约 800MB
+   - 下载位置：`~/.cache/huggingface/hub/`
+   - 下载时间：取决于您的网络速度（通常 5-15 分钟）
+
+2. **处理过程**
+   ```
+   Loading MLX DeepSeek-OCR model...
+   Downloading model files...
+   Model loaded successfully!
+   Processing image with mode: basic
+   ```
+
+3. **查看结果**
+   - 识别完成后，结果会显示在右侧
+   - 可以复制或下载结果
+
+---
+
+## 🎯 使用技巧
+
+### OCR 模式选择
+
+| 模式 | 用途 | 提示词 |
+|------|------|--------|
+| **基本 OCR** | 提取所有文字 | 适合普通文档、截图 |
+| **转换为 Markdown** | 结构化文档 | 适合书籍、论文、报告 |
+| **提取表格** | 表格数据 | 适合财务报表、统计表 |
+| **识别公式** | 数学公式 | 适合数学、物理文档 |
+
+### 新增功能
+
+| 功能 | 用途 | 說明 |
+|------|------|------|
+| **照片前處理** | 優化圖片品質 | 支援去背、去陰影、增強對比度 |
+| **影片截圖** | 從影片提取幀 | 支援固定間隔或場景偵測截圖 |
+
+### 获得最佳效果
+
+✅ **图片质量**
+- 使用清晰、高分辨率的图片
+- 确保文字清晰可读
+- 避免模糊、倾斜的图片
+
+✅ **文件格式**
+- 支持：JPG、PNG
+- 最大大小：16MB
+
+✅ **处理速度**
+- 简单文档：10-30 秒
+- 复杂文档：30-60 秒
+- 大型文档：1-2 分钟
+
+---
+
+## 🔧 常见问题
+
+### Q1: 模型下载很慢怎么办？
+
+**A:** 模型会下载到 `~/.cache/huggingface/hub/`
+
+如果下载中断，重启应用会继续下载。您也可以：
+
+```bash
+# 使用镜像加速（可选）
+export HF_ENDPOINT=https://hf-mirror.com
+python app.py
+```
+
+---
+
+### Q2: 出现 "ValueError: [metal_kernel] Only supports the GPU" 错误
+
+**A:** 這是因為 MLX 的某些操作需要 GPU 支持。
+我們已經更新了程式碼以自動檢測並使用 GPU。如果仍然遇到問題，請確保您的終端機環境允許訪問 GPU。
+
+---
+
+### Q2: 出现内存不足错误
+
+**A:** 如果您的 Mac RAM 较小（8GB），可以：
+
+1. 关闭其他占用内存的应用
+2. 减少 `max_tokens` 参数（在 `app.py` 中）：
+
+```python
+# app.py 第 95 行附近
+output = generate(
+    model, 
+    processor, 
+    image, 
+    prompt, 
+    max_tokens=500,  # 从 1000 改为 500
+    temperature=0.0
+)
+```
+
+---
+
+### Q3: 端口 5000 被占用
+
+**A:** 修改端口号：
+
+```python
+# app.py 最后一行
+app.run(host='0.0.0.0', port=5001, debug=True)  # 改为 5001
+```
+
+然后访问 `http://localhost:5001`
+
+---
+
+### Q4: 想要命令行版本
+
+**A:** 创建 `ocr_cli.py`：
+
+```python
+from mlx_vlm import load, generate
+from PIL import Image
+import sys
+
+# 加载模型
+print("Loading model...")
+model, processor = load("mlx-community/DeepSeek-OCR-4bit")
+
+# 读取图片
+image_path = sys.argv[1]
+image = Image.open(image_path)
+
+# OCR
+result = generate(
+    model, 
+    processor, 
+    image, 
+    "<image>\nFree OCR.", 
+    max_tokens=1000,
+    temperature=0.0
+)
+
+print(result)
+```
+
+使用：
+```bash
+python ocr_cli.py image.jpg
+```
+
+---
+
+## 📊 性能参考
+
+在 MacBook Pro M2 (16GB RAM) 上：
+
+| 任务 | 处理时间 |
+|------|---------|
+| 首次加载模型 | 10-20 秒 |
+| 单页文档 OCR | 15-30 秒 |
+| 复杂表格 | 30-45 秒 |
+| 数学公式 | 20-40 秒 |
+
+---
+
+## 🛑 停止应用
+
+在终端按 `Ctrl + C` 停止服务器
+
+---
+
+## 🔄 重新启动
+
+```bash
+# 激活虚拟环境
+source .venv/bin/activate
+
+# 启动应用
+python app.py
+```
+
+---
+
+## 📦 更新依赖
+
+```bash
+# 激活虚拟环境
+source .venv/bin/activate
+
+# 更新所有包
+pip install --upgrade -r requirements.txt
+```
+
+---
+
+## 🗑️ 卸载
+
+```bash
+# 删除虚拟环境
+rm -rf .venv
+
+# 删除模型缓存（可选）
+rm -rf ~/.cache/huggingface/hub/models--mlx-community--DeepSeek-OCR-4bit
+
+# 删除项目目录
+cd ..
+rm -rf MLX-DeepSeek-OCR
+```
+
+---
+
+## 💡 提示
+
+1. **模型只需下载一次**，之后会自动使用缓存
+2. **首次识别较慢**，因为需要下载模型
+3. **后续识别很快**，模型已在内存中
+4. **可以处理多张图片**，无需重启应用
+
+---
+
+## 📞 需要帮助？
+
+如果遇到问题：
+
+1. 检查 Python 版本：`python3 --version`（应该是 3.11+）
+2. 检查 macOS 版本：系统设置 > 通用 > 关于
+3. 查看终端错误信息
+4. 确保网络连接正常（首次需要下载模型）
+
+---
+
+## 🎉 享受使用！
+
+现在您可以在本地 Mac 上高效地进行 OCR 识别了！

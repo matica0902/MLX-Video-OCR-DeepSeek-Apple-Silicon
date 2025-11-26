@@ -1,0 +1,21 @@
+SPDX-License-Identifier: AGPL-3.0-or-later
+
+GNU AFFERO GENERAL PUBLIC LICENSE
+Version 3, 19 November 2007
+
+This project (MLX DeepSeek-OCR) is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+You may obtain a copy of the full license at:
+
+    https://www.gnu.org/licenses/agpl-3.0.en.html
+
+Short summary:
+- You are free to use, modify, and distribute this software, provided that
+  any distributed modified version is also licensed under the AGPL-3.0 and
+  source code is made available to recipients.
+- The Affero variant (AGPL) requires that if the software is run as a
+  network service, users interacting with the service must be able to
+  obtain the source code of the modified version.
+
+For the full license text and obligations, please see the URL above.
+
+Copyright (C) 2025 MLX DeepSeek-OCR contributors
