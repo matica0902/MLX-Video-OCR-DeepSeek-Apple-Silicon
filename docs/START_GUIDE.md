@@ -9,7 +9,7 @@
 
 ```bash
 # 1. 进入项目目录
-cd /Users/jianjunneng/1117test/FLASKAPP
+cd <your-project-directory>
 
 # 2. 启动应用
 python3 app.py
@@ -19,7 +19,7 @@ python3 app.py
 
 ```bash
 # 1. 进入项目目录
-cd /Users/jianjunneng/1117test/FLASKAPP
+cd <your-project-directory>
 
 # 2. 创建虚拟环境（如果还没有）
 python3 -m venv venv
@@ -46,7 +46,7 @@ python3 --version
 ### 步骤 2: 检查依赖是否安装
 
 ```bash
-cd /Users/jianjunneng/1117test/FLASKAPP
+cd <your-project-directory>
 pip3 list | grep -E "Flask|mlx|Pillow|opencv"
 ```
 
@@ -187,7 +187,7 @@ curl -X POST http://localhost:5000/api/unload-model
 
 ```bash
 #!/bin/bash
-cd /Users/jianjunneng/1117test/FLASKAPP
+cd "$(dirname "$0")"
 source venv/bin/activate 2>/dev/null || true
 python3 app.py
 ```
