@@ -259,11 +259,14 @@ GET  /api/files/<path>         # 文件服務
 ### **一鍵安裝**
 
 ```bash
-# 1. 克隆專案
+# 1. 選擇安裝目錄（建議使用家目錄或專案目錄）
+cd ~                    # 或 cd ~/Documents 或任何您喜歡的位置
+
+# 2. 克隆專案
 git clone https://github.com/matica0902/MLX-Video-OCR-DeepSeek-Apple-Silicon.git
 cd MLX-Video-OCR-DeepSeek-Apple-Silicon
 
-# 2. 執行啟動腳本（自動安裝依賴）
+# 3. 執行啟動腳本（自動安裝依賴）
 ./start.sh
 ```
 
@@ -285,14 +288,17 @@ cd MLX-Video-OCR-DeepSeek-Apple-Silicon
 ### **手動安裝**
 
 ```bash
-# 1. 創建虛擬環境
+# 1. 進入專案目錄
+cd ~/MLX-Video-OCR-DeepSeek-Apple-Silicon
+
+# 2. 創建虛擬環境
 python3 -m venv venv
 source venv/bin/activate
 
-# 2. 安裝依賴
+# 3. 安裝依賴
 pip install -r requirements.txt
 
-# 3. 啟動應用
+# 4. 啟動應用
 python3 app.py
 ```
 
