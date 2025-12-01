@@ -260,8 +260,8 @@ GET  /api/files/<path>         # 文件服務
 
 ```bash
 # 1. 克隆專案
-git clone https://github.com/matica0902/Video-PDF-IMG-DeepOCR-Omni.git
-cd Video-PDF-IMG-DeepOCR-Omni
+git clone https://github.com/matica0902/MLX-Video-OCR-DeepSeek-Apple-Silicon.git
+cd MLX-Video-OCR-DeepSeek-Apple-Silicon
 
 # 2. 執行啟動腳本（自動安裝依賴）
 ./start.sh
