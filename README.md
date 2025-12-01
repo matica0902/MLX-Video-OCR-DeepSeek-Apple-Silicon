@@ -2,14 +2,22 @@
 
 <div align="center">
 
+**🎯 Mac 一鍵部署 | 📹 影片/PDF/圖片 三合一 OCR | 🖥️ 完整 GUI 介面**
+
 **🚀 專為 Apple Silicon 優化的全功能 OCR 解決方案**
 
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%203.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![MLX](https://img.shields.io/badge/MLX-0.20.0+-orange.svg)](https://github.com/ml-explore/mlx)
 [![DeepSeek-OCR](https://img.shields.io/badge/Model-DeepSeek--OCR-purple.svg)](https://huggingface.co/mlx-community/DeepSeek-OCR-8bit)
+[![One-Click Deploy](https://img.shields.io/badge/部署-一鍵完成-success.svg)](https://github.com/matica0902/MLX-Video-OCR-DeepSeek-Apple-Silicon#-快速開始)
 
-*完全本地運行 • 隱私保護 • Metal GPU 加速 • 零配置部署*
+### ✨ 核心特色
+
+🍎 **Mac 專屬一鍵部署** • 📹 **影片截圖 OCR** • 📄 **PDF 批次處理** • 🖼️ **圖片智能識別**  
+🎨 **照片前處理** • 🖥️ **現代化 GUI** • 🔒 **完全本地運行** • ⚡ **Metal GPU 加速**
+
+*零配置 • 隱私保護 • 開箱即用*
 
 [快速開始](#-快速開始) • [功能特色](#-功能特色) • [架構設計](#-系統架構) • [文檔](#-文檔)
 
@@ -18,6 +26,27 @@
 ---
 
 ## ✨ 功能特色
+
+### 🎯 **三合一 OCR 處理**
+
+#### **📹 影片 OCR（獨家功能）**
+- **智能截圖提取**：自動從影片中提取關鍵幀
+- **支援格式**：MP4, AVI, MOV, MKV, WebM
+- **批次處理**：一次處理所有截圖
+- **無縫整合**：截圖直接進入 OCR 流程
+
+#### **📄 PDF OCR（批次處理）**
+- **雙模式**：批次處理 / 單頁精選
+- **即時預覽**：縮圖瀏覽、頁面選擇
+- **智能控制**：暫停、繼續、停止
+- **大文件支援**：自動分批處理
+
+#### **🖼️ 圖片 OCR（智能識別）**
+- **多場景支援**：文檔、表格、手寫、街景、照片
+- **前處理功能**：去背、增強、去陰影、旋轉
+- **格式輸出**：Markdown、LaTeX、純文字
+
+---
 
 ### 🎯 **核心 OCR 能力**
 
@@ -256,19 +285,23 @@ GET  /api/files/<path>         # 文件服務
 | **記憶體** | 16GB+ (推薦) |
 | **磁碟空間** | 5GB+ (含模型) |
 
-### **一鍵安裝**
+### **🍎 Mac 一鍵部署**
+
+**只需 3 行指令，60 秒完成部署！**
 
 ```bash
-# 1. 選擇安裝目錄（建議使用家目錄或專案目錄）
-cd ~                    # 或 cd ~/Documents 或任何您喜歡的位置
+# 1. 選擇安裝目錄
+cd ~/Downloads          # 或 cd ~ 或 cd ~/Documents
 
 # 2. 克隆專案
 git clone https://github.com/matica0902/MLX-Video-OCR-DeepSeek-Apple-Silicon.git
 cd MLX-Video-OCR-DeepSeek-Apple-Silicon
 
-# 3. 執行啟動腳本（自動安裝依賴）
+# 3. 一鍵啟動（自動完成所有設置）
 ./start.sh
 ```
+
+**🎉 就是這麼簡單！** 腳本會自動處理一切！
 
 **start.sh 會自動：**
 - ✅ 檢查 Python 版本
