@@ -3,10 +3,17 @@
 # See the LICENSE file in the project root for full license text:
 # https://www.gnu.org/licenses/agpl-3.0.en.html
 
+# 版本鎖定在 2025-12 驗證過的組合，避免外部套件改版造成錯誤
 Flask==3.0.0
-mlx-vlm==0.3.5
-mlx>=0.20.0
-Pillow>=10.3.0
 Werkzeug==3.0.1
-PyMuPDF
-opencv-python>=4.10.0
+mlx-vlm==0.3.5
+mlx==0.30.0
+mlx-lm==0.28.3
+transformers==4.57.3
+huggingface_hub==0.36.0
+tokenizers==0.22.1
+numpy==2.2.6
+Pillow==12.0.0
+PyMuPDF==1.26.6
+opencv-python==4.12.0.88
+datasets==4.4.1
