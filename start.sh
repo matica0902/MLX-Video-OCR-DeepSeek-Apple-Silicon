@@ -13,6 +13,21 @@ echo ""
 
 cd "$(dirname "$0")"
 
+# 自動更新到最新版（失敗不影響啟動）
+if [ -d .git ] && [ -z "$MLX_OCR_UPDATED" ]; then
+  echo "檢查更新..."
+  OLD=$(git rev-parse HEAD)
+  if git pull --ff-only -q 2>/dev/null; then
+    if [ "$OLD" != "$(git rev-parse HEAD)" ]; then
+      echo "已更新到最新版，重新啟動..."
+      MLX_OCR_UPDATED=1 exec "$0" "$@"
+    fi
+    echo "已是最新版"
+  else
+    echo "⚠️ 無法自動更新（離線或有本機修改），用目前版本繼續"
+  fi
+fi
+
 echo "檢查 Python 版本..."
 python3 --version
 
@@ -26,22 +41,19 @@ else
     source venv/bin/activate
 fi
 
-# 檢查依賴
+# 檢查依賴：版本不對的自動換掉，缺的自動補
 echo ""
-echo "檢查依賴..."
-MISSING=false
-python3 -c "import flask" 2>/dev/null || MISSING=true
-python3 -c "import mlx_vlm" 2>/dev/null || MISSING=true
-python3 -c "from PIL import Image" 2>/dev/null || MISSING=true
-python3 -c "import fitz" 2>/dev/null || MISSING=true  # PDF 解析必備
+echo "檢查依賴版本..."
+pip install -q -r requirements.txt || { echo "安裝失敗"; exit 1; }
+echo "依賴版本正確"
 
-if [ "$MISSING" = true ]; then
-    echo "缺少依賴，正在安裝..."
-    pip install -r requirements.txt
-    [ $? -eq 0 ] && echo "依賴安裝完成" || { echo "安裝失敗"; exit 1; }
-else
-    echo "依賴已安裝"
-fi
+# 檢查 OCR 模型（鎖定 2025-10-27 版，第一次會下載約 3.9 GB）
+echo ""
+echo "檢查 OCR 模型（第一次會下載約 3.9 GB）..."
+HF_HOME="$HOME/hf_cache" python3 -c "from huggingface_hub import snapshot_download as d; import os; r='mlx-community/DeepSeek-OCR-8bit'; v='148305747fad0be1d6f417d3c7cb477216c63a90'
+try: p=d(r, revision=v)
+except Exception: p=d(r, revision=v, local_files_only=True)
+assert os.path.exists(os.path.join(p,'model.safetensors')), '模型不完整'" || { echo "模型下載失敗或不完整，請檢查網路後重新執行 ./start.sh"; exit 1; }
 
 # 自動尋找可用端口 + 強制殺掉殭屍進程
 PORT=5000

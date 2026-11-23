@@ -182,7 +182,7 @@ def auto_rotate_image(image):
         lines = cv2.HoughLines(edges, 1, np.pi/180, threshold=100)
         if lines is not None:
             angles = []
-            for rho, theta in lines[:20]:
+            for rho, theta in lines[:20, 0]:
                 angle = np.degrees(theta) - 90
                 angles.append(angle)
             
@@ -435,7 +435,7 @@ def _load_model_for_subprocess():
         try:
             print(f"[{os.getpid()}] 🚀 Loading MLX DeepSeek-OCR model in subprocess...")
             model_path = "mlx-community/DeepSeek-OCR-8bit"
-            _model_instance, _processor_instance = load(model_path)
+            _model_instance, _processor_instance = load(model_path, revision="148305747fad0be1d6f417d3c7cb477216c63a90")
             print(f"[{os.getpid()}] ✅ Model loaded successfully in subprocess!")
             print(f"[{os.getpid()}] 🔊 Metal available: {mx.metal.is_available()}")
             return True

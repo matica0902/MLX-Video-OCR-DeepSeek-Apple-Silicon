@@ -314,7 +314,7 @@ cd MLX-Video-OCR-DeepSeek-Apple-Silicon
 ### **首次使用**
 
 1. **訪問應用**：http://localhost:5000
-2. **首次 OCR**：自動下載模型（~800MB，需 5-15 分鐘）
+2. **首次 OCR**：`start.sh` 第一次啟動時會先下載模型（約 3.9 GB，依網速需 5-30 分鐘）
 3. **模型位置**：`~/hf_cache/hub/models--mlx-community--DeepSeek-OCR-8bit/`
 4. **後續使用**：模型已緩存，啟動即用
 
