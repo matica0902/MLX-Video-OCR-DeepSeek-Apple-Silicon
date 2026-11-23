@@ -29,15 +29,57 @@ if [ -d .git ] && [ -z "$MLX_OCR_UPDATED" ]; then
 fi
 
 echo "檢查 Python 版本..."
-python3 --version
+# 優先用 3.11，其次 3.12 / 3.13，都沒有才用 python3
+PY=""
+for p in python3.11 python3.12 python3.13 python3; do
+    if command -v "$p" >/dev/null 2>&1 && "$p" -c 'import sys; sys.exit(sys.version_info < (3, 11))' 2>/dev/null; then
+        PY="$p"; break
+    fi
+done
+# 沒有 3.11 以上：下載獨立版 Python 3.11.18 到專案資料夾（不動系統，刪資料夾即移除）
+if [ -z "$PY" ] && [ -x ".python/bin/python3.11" ]; then
+    PY=".python/bin/python3.11"
+fi
+if [ -z "$PY" ]; then
+    if [ "$(uname -m)" != "arm64" ]; then
+        echo "❌ 需要 Apple Silicon (M1/M2/M3/M4) Mac"; exit 1
+    fi
+    echo ""
+    echo "找不到 Python 3.11 以上（目前: $(python3 --version 2>&1)）"
+    echo "本專案需要 Python 3.11+。可以下載專案專用的 Python 3.11.18（約 27 MB）："
+    echo "  • 只放在本專案的 .python/ 資料夾，不會修改系統的 Python"
+    echo "  • 來源 python-build-standalone，下載後會驗證 SHA256"
+    echo "  • 刪除本專案資料夾即完全移除"
+    if [ -t 0 ]; then
+        read -r -p "要下載嗎？[Y/n] " ans
+    else
+        ans="n"
+    fi
+    case "$ans" in
+        ""|y|Y|yes|YES) ;;
+        *) echo "已取消。也可以自行安裝：brew install python@3.11，再重新執行 ./start.sh"; exit 1 ;;
+    esac
+    echo "下載中..."
+    PBS_URL="https://github.com/astral-sh/python-build-standalone/releases/download/20261110/cpython-3.11.18%2B20261110-aarch64-apple-darwin-install_only.tar.gz"
+    PBS_SHA="73f1ed14486aa278d331e95f7d6d452f5cfb69d90b418e26e62fd4846d53557d"
+    curl -fL --retry 3 -o .python.tgz "$PBS_URL" || { echo "❌ Python 下載失敗，請檢查網路後重新執行 ./start.sh"; rm -f .python.tgz; exit 1; }
+    echo "$PBS_SHA  .python.tgz" | shasum -a 256 -c - >/dev/null || { echo "❌ Python 檔案驗證失敗，已刪除"; rm -f .python.tgz; exit 1; }
+    rm -rf .python && mkdir .python && tar -xzf .python.tgz -C .python --strip-components 1 && rm -f .python.tgz
+    PY=".python/bin/python3.11"
+fi
+"$PY" --version
 
-# 虛擬環境
+# 虛擬環境：版本太舊的 venv 自動重建
+if [ -d "venv" ] && ! venv/bin/python -c 'import sys; sys.exit(sys.version_info < (3, 11))' 2>/dev/null; then
+    echo "虛擬環境的 Python 版本太舊，重新建立..."
+    rm -rf venv
+fi
 if [ -d "venv" ]; then
     echo "發現虛擬環境，正在激活..."
     source venv/bin/activate
 else
-    echo "創建虛擬環境..."
-    python3 -m venv venv
+    echo "創建虛擬環境（$PY）..."
+    "$PY" -m venv venv
     source venv/bin/activate
 fi
 

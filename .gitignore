@@ -13,3 +13,7 @@ venv/
 # Project specific
 uploads/
 *.log
+
+# 專案專用 Python（start.sh 自動下載）
+.python/
+.python.tgz
