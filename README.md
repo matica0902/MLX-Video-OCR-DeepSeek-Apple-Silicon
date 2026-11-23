@@ -1,5 +1,19 @@
 # MLX DeepSeek-OCR
 
+> **📢 2026-11-23 已修復：首次 OCR 一直出現錯誤（500）、模型無法載入的問題**
+>
+> 很抱歉！外部套件和 Hugging Face 上的模型更新後，導致新安裝的人無法載入模型。**不是你的電腦或操作有問題。**
+>
+> 之前安裝過的朋友，打開「終端機」貼上這一行就會自動修好（會自動找到你當初安裝的資料夾）：
+>
+> ```bash
+> cd "$(dirname "$(find ~ -maxdepth 3 -name start.sh -path '*MLX-Video-OCR*' 2>/dev/null | head -1)")" && git pull && ./start.sh
+> ```
+>
+> - 第一次會重新整理套件，約需幾分鐘
+> - 之後 `start.sh` 會自動更新，不用再手動操作
+> - 還有問題請到 [Issues](https://github.com/matica0902/MLX-Video-OCR-DeepSeek-Apple-Silicon/issues) 留言
+
 <div align="center">
 
 **🎯 Mac 一鍵部署 | 📹 影片/PDF/圖片 三合一 OCR | 🖥️ 完整 GUI 介面**
